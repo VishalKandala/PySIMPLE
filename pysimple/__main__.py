@@ -7,9 +7,9 @@ from pathlib import Path
 from .api import run
 from .cases import available_cases
 from .performance import benchmark
-from .postprocess import channel_metrics, plot_result, save_result
+from .postprocess import plot_result, save_result
 from .solver import SimpleSolver
-from .verification import poiseuille_metrics
+from .verification import developing_channel_metrics, poiseuille_metrics
 
 
 def _parser():
@@ -24,6 +24,8 @@ def _parser():
     parser.add_argument("--iterations", type=int, help="maximum SIMPLE iterations")
     parser.add_argument("--tolerance", type=float, help="continuity convergence tolerance")
     parser.add_argument("--pressure-solver", choices=("jacobi", "multigrid"), help="pressure-correction solver")
+    parser.add_argument("--momentum-sweeps", type=int, help="Jacobi sweeps per momentum solve")
+    parser.add_argument("--pressure-sweeps", type=int, help="Jacobi sweeps per pressure-correction solve")
     parser.add_argument("--output", type=Path, default=Path("result.npz"), help="solution archive path")
     parser.add_argument("--plot", type=Path, help="optional PNG plot path")
     parser.add_argument("--benchmark-repeats", type=int, default=0, help="run complete-solve timing repetitions")
@@ -40,7 +42,8 @@ def main(argv=None):
     completed = run(
         name, backend=args.backend, nx=args.nx, ny=args.ny, reynolds=args.reynolds,
         lid_velocity=args.lid_velocity, iterations=args.iterations, tolerance=args.tolerance,
-        pressure_solver=args.pressure_solver,
+        pressure_solver=args.pressure_solver, momentum_sweeps=args.momentum_sweeps,
+        pressure_sweeps=args.pressure_sweeps,
     )
     save_result(args.output, completed.result, completed.case)
     print("case: {}".format(completed.case.name))
@@ -49,7 +52,7 @@ def main(argv=None):
     print("converged: {}".format(completed.result.converged))
     print("continuity residual: {:.6e}".format(completed.result.continuity_history[-1]))
     if name == "channel":
-        print("channel metrics:", channel_metrics(completed.result, completed.grid, completed.case.fluid))
+        print("channel metrics:", developing_channel_metrics(completed.result, completed.grid, completed.case))
     elif name == "poiseuille":
         print("verification:", poiseuille_metrics(completed.result, completed.grid, completed.case))
     if args.plot:

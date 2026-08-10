@@ -37,6 +37,27 @@ Generated artifacts:
 
 ![Verified 8×24 Poiseuille flow: pressure, speed, and streamlines](docs/assets/poiseuille-8x24.png)
 
+## Open-channel verification
+
+The velocity-inlet/pressure-outlet channel is verified at Re=40 on a 48×16 grid with an 8:1 channel aspect ratio. The run reaches the fully developed parabolic outlet profile and enforces inlet/outlet flux consistency through the SIMPLE outlet treatment.
+
+```sh
+pysimple --case channel --nx 48 --ny 16 --reynolds 40 --iterations 2500 \
+  --tolerance 5e-7 --pressure-sweeps 100 \
+  --output docs/assets/developing-channel-re40-48x16.npz \
+  --plot docs/assets/developing-channel-re40-48x16.png \
+  --benchmark-repeats 3 \
+  --benchmark-output docs/performance/developing-channel-re40-48x16-cpu.json
+```
+
+The recorded run converged in 2,272 iterations to a continuity residual of `5.00e-7`. Its inlet/outlet mass-flux relative error was `1.11e-16`; the outlet-profile L∞ error was `5.77e-3`; and the Fanning factor was `0.59535`, versus `24/Re = 0.60000` (0.78% difference). Three complete NumPy solves had a 7.829 s median runtime, or 3.45 ms per outer iteration.
+
+- [Open-channel result archive](docs/assets/developing-channel-re40-48x16.npz)
+- [Open-channel pressure, speed, and streamlines](docs/assets/developing-channel-re40-48x16.png)
+- [Open-channel CPU timing record](docs/performance/developing-channel-re40-48x16-cpu.json)
+
+![Verified Re=40 developing channel: pressure drop, velocity development, and streamlines](docs/assets/developing-channel-re40-48x16.png)
+
 ## Run
 
 Install the package for the short `pysimple` command, or use `python -m pysimple` directly from a checkout:
@@ -83,4 +104,4 @@ For CUDA, install the CuPy build appropriate to the system, then choose `--backe
 
 ## Deliberate current limits
 
-The open inlet/pressure-outlet channel is present as an exploratory case but is **not yet a validated benchmark**. The verified channel benchmark is periodic, body-force-driven Poiseuille flow. Curvilinear/stretched grids, solid obstacles/backward-facing steps, conjugate heat transfer, turbulence models, and transient/artificial-compressibility methods are not implemented.
+Curvilinear/stretched flow grids, solid obstacles/backward-facing steps, conjugate heat transfer, turbulence models, and transient/artificial-compressibility methods are not implemented.

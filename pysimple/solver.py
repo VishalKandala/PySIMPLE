@@ -6,6 +6,7 @@ import numpy as np
 
 from .backend import array_module, to_numpy
 from .boundary import (
+    enforce_outlet_mass_flux,
     apply_pressure_boundaries,
     apply_pressure_correction_boundaries,
     apply_velocity_boundaries,
@@ -71,14 +72,17 @@ class SimpleSolver:
         controls = self.case.controls
         for iteration in range(1, controls.max_iterations + 1):
             apply_velocity_boundaries(state, self.grid, self.case)
+            enforce_outlet_mass_flux(state, self.grid, self.case, xp)
             u_coefficients, v_coefficients = momentum_coefficients(
                 state, self.grid, self.case.fluid, controls.momentum_relaxation, xp,
                 self.case.body_force_x, self.case.body_force_y,
             )
             jacobi_momentum(state.u, u_coefficients, controls.momentum_sweeps)
             apply_velocity_boundaries(state, self.grid, self.case)
+            enforce_outlet_mass_flux(state, self.grid, self.case, xp)
             jacobi_momentum(state.v, v_coefficients, controls.momentum_sweeps)
             apply_velocity_boundaries(state, self.grid, self.case)
+            enforce_outlet_mass_flux(state, self.grid, self.case, xp)
             u_residual = momentum_residual(state.u, u_coefficients, xp)
             v_residual = momentum_residual(state.v, v_coefficients, xp)
 
@@ -102,6 +106,7 @@ class SimpleSolver:
                 )
             correct_fields(state, state.pressure_correction, self.grid, controls.pressure_relaxation, du, dv)
             apply_velocity_boundaries(state, self.grid, self.case)
+            enforce_outlet_mass_flux(state, self.grid, self.case, xp)
             apply_pressure_boundaries(state.pressure, self.case)
 
             residual = continuity_residual(state, self.grid, self.case.fluid.density, xp)

@@ -1,0 +1,14 @@
+{
+  "backend": "numpy",
+  "repeats": 3,
+  "samples_seconds": [
+    7.818366496998351,
+    7.829452514000877,
+    7.8316270879986405
+  ],
+  "median_seconds": 7.829452514000877,
+  "iterations": 2272,
+  "median_iteration_milliseconds": 3.4460618459510903,
+  "converged": true,
+  "final_continuity": 4.99620121589812e-07
+}

@@ -5,10 +5,11 @@ import unittest
 
 import numpy as np
 
-from pysimple import GridSpec, SimpleControls, SimpleSolver, fully_developed_channel, lid_driven_cavity, run
+from pysimple import GridSpec, SimpleControls, SimpleSolver, developing_channel, fully_developed_channel, lid_driven_cavity, run
 from pysimple.config import ThermalBoundaryCondition, ThermalBoundaryKind, ThermalProblem
 from pysimple.solver import SimpleResult
 from pysimple.geometry import backward_facing_step_grid, stretched_faces
+from pysimple.verification import developing_channel_metrics
 
 
 class SimpleSolverTests(unittest.TestCase):
@@ -116,6 +117,20 @@ class SimpleSolverTests(unittest.TestCase):
         self.assertEqual(completed.case.name, "lid-driven-cavity")
         self.assertEqual(completed.result.iterations, 1)
         self.assertEqual(completed.grid.spec.nx, 8)
+
+    def test_open_channel_conserves_mass_and_reaches_poiseuille_profile(self):
+        case = developing_channel(nx=48, ny=16, length=8.0, reynolds=40.0)
+        controls = replace(
+            case.controls, max_iterations=2_500, momentum_sweeps=20, pressure_sweeps=100,
+            continuity_tolerance=5.0e-7,
+        )
+        solver = SimpleSolver(replace(case, controls=controls))
+        result = solver.solve()
+        metrics = developing_channel_metrics(result, solver.grid, case)
+        self.assertTrue(result.converged)
+        self.assertLess(metrics["mass_flux_relative_error"], 1.0e-12)
+        self.assertLess(metrics["outlet_profile_linf_error"], 1.0e-2)
+        self.assertAlmostEqual(metrics["fanning_friction_factor"], metrics["fanning_reference_24_over_re"], delta=1.0e-2)
 
 
 if __name__ == "__main__":

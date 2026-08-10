@@ -76,3 +76,23 @@ def apply_pressure_correction_boundaries(correction, case) -> None:
         condition = b[side]
         source = 1 if index == 0 else -2
         correction[:, index] = 0.0 if condition.kind is BoundaryKind.PRESSURE_OUTLET else correction[:, source]
+
+
+def enforce_outlet_mass_flux(state, grid, case, xp) -> None:
+    """Scale a pressure-outlet profile to match a prescribed inlet flux.
+
+    SIMPLE's pressure correction enforces local continuity in the domain.  A
+    velocity-inlet/pressure-outlet pair additionally needs a consistent outlet
+    flux while the pressure field is settling.  This conservative correction is
+    restricted to that boundary pairing and leaves periodic/cavity cases alone.
+    """
+    left = case.boundaries["left"]
+    right = case.boundaries["right"]
+    if left.kind is not BoundaryKind.VELOCITY_INLET or right.kind is not BoundaryKind.PRESSURE_OUTLET:
+        return
+    inlet_flux = xp.sum(state.u[0, 1:-1])
+    outlet_profile = state.u[-2, 1:-1]
+    outlet_flux = xp.sum(outlet_profile)
+    valid_flux = xp.abs(outlet_flux) > 1.0e-30
+    scaled_profile = outlet_profile * inlet_flux / xp.where(valid_flux, outlet_flux, 1.0)
+    state.u[-1, 1:-1] = xp.where(valid_flux, scaled_profile, state.u[0, 1:-1])
