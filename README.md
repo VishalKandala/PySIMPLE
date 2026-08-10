@@ -1,91 +1,78 @@
-# Python Incompressible Flow Solvers (Finite Volume Method)
+# PySIMPLE
 
-![Language](https://img.shields.io/badge/Language-Python-blue.svg)
-![Libraries](https://img.shields.io/badge/Libraries-NumPy%20%7C%20Matplotlib-orange.svg)
-![Methods](https://img.shields.io/badge/Methods-FVM%20%7C%20SIMPLE%20%7C%20Artificial%20Compressibility-red.svg)
+PySIMPLE is a from-scratch, two-dimensional, steady incompressible finite-volume solver for uniform Cartesian staggered grids. It uses SIMPLE pressure–velocity coupling and keeps numerical kernels array-backend generic: select NumPy today or CuPy on a supported CUDA system.
 
-This repository contains custom, from-scratch Python solvers for the 2D incompressible Navier-Stokes equations. The project demonstrates the implementation of fundamental CFD principles and advanced numerical methods for solving classic fluid dynamics benchmark problems, without relying on external CFD libraries.
+## Supported, verified scope
 
-The primary goal is to showcase a deep, first-principles understanding of solver architecture, numerical schemes, and validation techniques.
+- Constant-density, constant-viscosity laminar flow
+- Uniform Cartesian MAC/staggered grids
+- No-slip and prescribed-velocity walls, periodic sides, and a basic pressure outlet
+- Lid-driven cavity and periodic body-force-driven plane Poiseuille flow
+- Passive steady temperature transport with fixed-temperature or zero-gradient boundaries
+- Jacobi or experimental geometric-multigrid pressure correction
 
-## Core Numerical Methods Implemented
+The suite verifies staggered-grid layouts, cavity finiteness/residual reduction, a Poiseuille profile against its analytic solution, and pure conduction against the linear analytic temperature profile.
 
-This collection of solvers demonstrates proficiency across a range of essential CFD techniques:
+## Baseline verification and CPU measurement
 
-*   **Discretization:** Cell-centered **Finite Volume Method (FVM)** on structured grids.
-*   **Grid Systems:**
-    *   **Staggered Grid:** To prevent pressure-velocity decoupling and avoid spurious checkerboard pressure fields.
-    *   **Stretched Curvilinear Grid:** For efficient mesh clustering in regions with high gradients (e.g., near walls and steps).
-*   **Pressure-Velocity Coupling Algorithms:**
-    *   **SIMPLE Algorithm:** The classic Semi-Implicit Method for Pressure-Linked Equations, an iterative segregation-based approach.
-    *   **Artificial Compressibility Method:** A pseudo-time marching method that allows the use of explicit schemes (like Runge-Kutta) for incompressible flow.
-*   **Schemes:**
-    *   **Power-Law Scheme:** For robust and stable discretization of convection-diffusion terms.
-    *   **2nd-Order Central Differencing:** For spatial discretization of fluxes.
-*   **Stability & Time-Stepping:**
-    *   **4th-Order Artificial Dissipation:** To suppress numerical oscillations and maintain stability in convection-dominated flows.
-    *   **4th-Order Low-Storage Runge-Kutta (LSRK4):** For high-accuracy explicit pseudo-time integration with optimized memory usage.
-*   **Linear System Solvers:**
-    *   **Line-by-Line TDMA (Thomas Algorithm):** For solving the resulting algebraic equations.
-    *   **Strongly Implicit Procedure (SIP):** A combination of Successive Under-Relaxation and TDMA.
+The smallest documented flow verification is an 8×24 periodic, body-force-driven plane-Poiseuille channel. Its analytic solution is parabolic, so it checks the momentum discretization, wall treatment, pressure coupling, and post-processing without relying on an unverified open outlet.
 
----
-
-## Showcased Simulations & Validations
-
-### 1. Laminar Channel Flow (with Heat Transfer)
-
-This case simulates the developing flow of viscous oil (Re=200) in a 2D channel, including the conjugate heat transfer problem. It serves as a validation for the **SIMPLE algorithm**.
-
-![`U Contours for Channel Flow`](ch_u_ctr.png)
-
-*Figure 3: U velocity contours at Re=200*
-
-![`V Countours for Channel Flow`](ch_v_ctr.png)
-
-*Figure 4: U velocity contours at Re=200*
-
-**Results & Validation:**
-The solver correctly captures the development of the parabolic velocity profile from a uniform inlet. Crucially, the calculated Fanning friction factor converges to the theoretical value of `24/Re = 0.12` for fully developed flow between parallel plates.
-
-### 2. Lid-Driven Cavity Flow
-
-This classic CFD benchmark simulates the vortex formation within a square cavity where the top lid moves at a constant velocity. It is an excellent test for the solver's robustness and accuracy in handling strong vortical flows.
-
-![`U Contours for Lid-Driven Cavity`](cavity_u_ctr.png)
-
-*Figure 3: U velocity contours at Re=200*
-
-![`V Countours for Lid-Driven Cavity`](cavity_v_ctr.png)
-
-*Figure 4: U velocity contours at Re=200*
-
-
-## How to Run
-
-### Prerequisites
-
-*   Python 3.x
-*   NumPy
-*   Matplotlib
-
-You can install the required packages using pip:
 ```sh
-pip install numpy matplotlib
+python -m pysimple poiseuille --nx 8 --ny 24 \
+  --output docs/assets/poiseuille-8x24.npz \
+  --plot docs/assets/poiseuille-8x24.png \
+  --benchmark-repeats 3 \
+  --benchmark-output docs/performance/poiseuille-8x24-cpu.json
 ```
 
-### Execution
+This repository's recorded CPU run converged in 1,097 SIMPLE iterations to a continuity residual of `9.95e-11`. The profile L∞ error was `1.68e-3`; the Fanning friction factor was `0.17898`, versus `24/Re = 0.17949` (0.28% difference). The median of three complete NumPy solves was 2.270 s, or about 2.07 ms per outer iteration. These are small-grid baseline timings, not a CPU/GPU comparison.
 
-To run a simulation, execute one of the main scripts from the root directory.
+Generated artifacts:
 
-**To run the Channel Flow simulation:**
+- [Poiseuille result archive](docs/assets/poiseuille-8x24.npz)
+- [Poiseuille pressure, speed, and streamline plot](docs/assets/poiseuille-8x24.png)
+- [Three-run CPU timing record](docs/performance/poiseuille-8x24-cpu.json)
+
+## Run
+
+Install the package for the short `pysimple` command, or use `python -m pysimple` directly from a checkout:
+
 ```sh
-python main_channel.py
+python -m pip install -e .
 ```
 
-**To run the Backward-Facing Step simulation:**
 ```sh
-python main_bfs.py
+python -m unittest discover -s tests -v
+pysimple --case cavity --nx 32 --ny 32 --output outputs/cavity.npz
 ```
 
-The scripts will print convergence residuals to the console. Upon completion, plot images (e.g., `u_contour.png`, `streamlines.png`) will be saved to the root directory.
+The command follows the same named-case style as PyJST. `--case cavity` is the default; `poiseuille` and `channel` are also available. The older positional form (`python -m pysimple poiseuille`) remains supported.
+
+Common controls are visible through `python -m pysimple --help`:
+
+```sh
+pysimple --case cavity --reynolds 400 --iterations 5000 --tolerance 1e-7
+pysimple --case poiseuille --nx 8 --ny 24 --benchmark-repeats 3
+```
+
+For notebooks and scripts, the high-level API has the same case-oriented entry point:
+
+```python
+from pysimple import run
+
+completed = run("cavity", nx=32, ny=32, reynolds=100.0)
+u, v, pressure = completed.result.u, completed.result.v, completed.result.pressure
+```
+
+Plotting is optional:
+
+```sh
+pip install -e '.[viz]'
+python -m pysimple cavity --plot cavity.png
+```
+
+For CUDA, install the CuPy build appropriate to the system, then choose `--backend cupy`. The NumPy and CuPy paths share the same vectorized finite-volume kernels; GPU parity must be run on the target machine.
+
+## Deliberate current limits
+
+The open inlet/pressure-outlet channel is present as an exploratory case but is **not yet a validated benchmark**. The verified channel benchmark is periodic, body-force-driven Poiseuille flow. Curvilinear/stretched grids, solid obstacles/backward-facing steps, conjugate heat transfer, turbulence models, and transient/artificial-compressibility methods are not implemented.
