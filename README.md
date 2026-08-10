@@ -2,6 +2,8 @@
 
 PySIMPLE is a from-scratch, two-dimensional, steady incompressible finite-volume solver for uniform Cartesian staggered grids. It uses SIMPLE pressure–velocity coupling and keeps numerical kernels array-backend generic: select NumPy today or CuPy on a supported CUDA system.
 
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/VishalKandala/PySIMPLE/blob/main/notebooks/pysimple_colab.ipynb)
+
 ## Supported, verified scope
 
 - Constant-density, constant-viscosity laminar flow
@@ -33,6 +35,8 @@ Generated artifacts:
 - [Poiseuille pressure, speed, and streamline plot](docs/assets/poiseuille-8x24.png)
 - [Three-run CPU timing record](docs/performance/poiseuille-8x24-cpu.json)
 
+![Verified 8×24 Poiseuille flow: pressure, speed, and streamlines](docs/assets/poiseuille-8x24.png)
+
 ## Run
 
 Install the package for the short `pysimple` command, or use `python -m pysimple` directly from a checkout:
@@ -63,6 +67,10 @@ from pysimple import run
 completed = run("cavity", nx=32, ny=32, reynolds=100.0)
 u, v, pressure = completed.result.u, completed.result.v, completed.result.pressure
 ```
+
+## Google Colab
+
+The [PySIMPLE Colab notebook](https://colab.research.google.com/github/VishalKandala/PySIMPLE/blob/main/notebooks/pysimple_colab.ipynb) installs the current `main` branch, runs the verified Poiseuille case, prints analytic-comparison metrics, and renders the result. It is CPU-ready by default; use a CUDA runtime and install the matching CuPy wheel before selecting `backend="cupy"`.
 
 Plotting is optional:
 
